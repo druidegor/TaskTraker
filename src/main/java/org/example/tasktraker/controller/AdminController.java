@@ -2,11 +2,11 @@ package org.example.tasktraker.controller;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-
 import org.example.tasktraker.entity.Project;
 import org.example.tasktraker.entity.User;
-import org.example.tasktraker.service.ProjectService;
-import org.example.tasktraker.service.UserService;
+import org.example.tasktraker.network.NetworkClient;
+import org.example.tasktraker.network.Request;
+import org.example.tasktraker.network.Response;
 
 import java.util.List;
 
@@ -18,62 +18,78 @@ public class AdminController {
     @FXML private TextField projectDescriptionField;
     @FXML private ComboBox<User> userComboBox;
 
-    private final ProjectService projectService = new ProjectService();
-    private final UserService userService = new UserService();
-
     private List<Project> projects;
-
     private int adminId;
 
     public void setUserId(int userId) {
         this.adminId = userId;
-        showAdminInfo();
+        adminInfoLabel.setText("Admin ID: " + adminId + " (Online)");
     }
-
 
     public void initialize() {
         loadProjects();
         loadUsers();
     }
 
-    private void showAdminInfo() {
-        User admin = userService.getUserById(adminId);
-
-        if (admin != null) {
-            adminInfoLabel.setText(
-                    "Admin: " + admin.getName() + " (" + admin.getRole() + ")"
-            );
-        }
-    }
-
     private void loadProjects() {
         projectList.getItems().clear();
-        projects = projectService.getAllProjects();
 
-        for (Project p : projects) {
-            projectList.getItems().add(p.getName());
+        // Отправляем запрос на получение всех проектов
+        Request request = new Request("GET_ALL_PROJECTS", null);
+        Response response = NetworkClient.getInstance().sendRequest(request);
+
+        if (response != null && response.isSuccess()) {
+            // Распаковываем ответ
+            projects = (List<Project>) response.getData();
+            for (Project p : projects) {
+                projectList.getItems().add(p.getName());
+            }
+        } else {
+            showError("Ошибка загрузки проектов: " + (response != null ? response.getMessage() : "Нет ответа"));
         }
     }
 
     private void loadUsers() {
-        List<User> users = userService.getAllUsers();
-        userComboBox.getItems().addAll(users);
+        userComboBox.getItems().clear();
+
+        // Отправляем запрос на получение всех пользователей
+        Request request = new Request("GET_ALL_USERS", null);
+        Response response = NetworkClient.getInstance().sendRequest(request);
+
+        if (response != null && response.isSuccess()) {
+            List<User> users = (List<User>) response.getData();
+            userComboBox.getItems().addAll(users);
+        } else {
+            showError("Ошибка загрузки пользователей: " + (response != null ? response.getMessage() : "Нет ответа"));
+        }
     }
 
     @FXML
     private void handleCreateProject() {
-        String name = projectNameField.getText();
-        String description = projectDescriptionField.getText();
+        String name = projectNameField.getText().trim();
+        String description = projectDescriptionField.getText().trim();
 
-        try {
-            projectService.createProject(name, description);
+        if (name.isEmpty()) {
+            showError("Введите название проекта");
+            return;
+        }
+
+        // Упаковываем данные проекта в массив
+        String[] payload = {name, description};
+        Request request = new Request("CREATE_PROJECT", payload);
+        Response response = NetworkClient.getInstance().sendRequest(request);
+
+        if (response != null && response.isSuccess()) {
+            // Если успешно, перезагружаем список проектов с сервера
             loadProjects();
-
             projectNameField.clear();
             projectDescriptionField.clear();
 
-        } catch (Exception e) {
-            showError(e.getMessage());
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setContentText("Проект успешно создан!");
+            alert.show();
+        } else {
+            showError(response != null ? response.getMessage() : "Ошибка сервера");
         }
     }
 
@@ -83,15 +99,25 @@ public class AdminController {
         User user = userComboBox.getValue();
 
         if (selectedIndex == -1 || user == null) {
-            showError("Select project and user");
+            showError("Выберите проект и пользователя");
             return;
         }
 
         int projectId = projects.get(selectedIndex).getId();
 
-        projectService.assignUserToProject(user.getId(), projectId);
-    }
+        // Упаковываем ID пользователя и ID проекта в массив чисел
+        int[] payload = {user.getId(), projectId};
+        Request request = new Request("ASSIGN_USER", payload);
+        Response response = NetworkClient.getInstance().sendRequest(request);
 
+        if (response != null && response.isSuccess()) {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setContentText("Пользователь успешно назначен!");
+            alert.show();
+        } else {
+            showError(response != null ? response.getMessage() : "Ошибка сервера");
+        }
+    }
 
     private void showError(String msg) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
