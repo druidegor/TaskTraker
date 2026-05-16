@@ -2,8 +2,11 @@ package org.example.tasktraker.controller;
 
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.stage.Stage;
 import org.example.tasktraker.entity.Comment;
 import org.example.tasktraker.entity.Project;
 import org.example.tasktraker.entity.Task;
@@ -155,7 +158,8 @@ public class DeveloperController {
                 titleResult.get().trim(),
                 descriptionResult.orElse("").trim(),
                 projectId,
-                userId
+                userId,
+                selectedTask != null ? selectedTask.getAssigneeId() : userId
         };
 
         Response response = NetworkClient.getInstance().sendRequest(new Request("CREATE_BUG", payload));
@@ -266,6 +270,18 @@ public class DeveloperController {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setContentText(msg);
         alert.show();
+    }
+
+    @FXML
+    private void handleLogout() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/org/example/tasktraker/login_screen.fxml"));
+            Scene scene = new Scene(loader.load());
+            Stage stage = (Stage) developerInfoLabel.getScene().getWindow();
+            stage.setScene(scene);
+        } catch (Exception e) {
+            showError("Cannot open login screen");
+        }
     }
 
     private void showError(String msg) {

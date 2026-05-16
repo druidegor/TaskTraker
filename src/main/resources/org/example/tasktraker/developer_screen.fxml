@@ -12,6 +12,7 @@
             <Label fx:id="developerInfoLabel" text="Developer" style="-fx-text-fill: white; -fx-font-size: 16;"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Button text="Refresh" onAction="#handleRefresh"/>
+            <Button text="Logout" onAction="#handleLogout"/>
         </HBox>
     </top>
 

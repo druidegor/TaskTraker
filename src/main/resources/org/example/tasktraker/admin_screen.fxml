@@ -8,8 +8,10 @@
             fx:controller="org.example.tasktraker.controller.AdminController">
 
     <top>
-        <HBox style="-fx-padding: 10;">
+        <HBox spacing="12" style="-fx-padding: 10;">
             <Label fx:id="adminInfoLabel" style="-fx-font-size: 16;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Logout" onAction="#handleLogout"/>
         </HBox>
     </top>
 
@@ -37,6 +39,18 @@
             <ComboBox fx:id="assigneeComboBox" promptText="Assignee" maxWidth="Infinity"/>
             <ComboBox fx:id="priorityComboBox" promptText="Priority" maxWidth="Infinity"/>
             <Button text="Create Task" onAction="#handleCreateTask"/>
+
+            <Separator/>
+
+            <Label text="Project Tasks" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+            <TableView fx:id="tasksTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colTaskTitle" text="Title" prefWidth="180"/>
+                    <TableColumn fx:id="colTaskStatus" text="Status" prefWidth="120"/>
+                    <TableColumn fx:id="colTaskPriority" text="Priority" prefWidth="90"/>
+                    <TableColumn fx:id="colTaskAssignee" text="Assignee" prefWidth="140"/>
+                </columns>
+            </TableView>
         </VBox>
     </center>
 

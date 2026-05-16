@@ -6,9 +6,9 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import org.example.tasktraker.service.UserService;
-
-import java.sql.*;
+import org.example.tasktraker.network.NetworkClient;
+import org.example.tasktraker.network.Request;
+import org.example.tasktraker.network.Response;
 
 public class RegisterController {
 
@@ -22,8 +22,6 @@ public class RegisterController {
     @FXML private Button registerButton;
     @FXML private Hyperlink loginLink;
     @FXML private Label errorLabel;
-
-    private final UserService userService = new UserService();
 
     public void initialize() {
         roleComboBox.getItems().addAll("DEVELOPER", "TESTER");
@@ -40,8 +38,14 @@ public class RegisterController {
         String role = roleComboBox.getValue();
 
         try {
-            userService.register(name, email, password, confirmPassword, role);
-            openLogin();
+            String[] payload = {name, email, password, confirmPassword, role};
+            Response response = NetworkClient.getInstance().sendRequest(new Request("REGISTER", payload));
+
+            if (response != null && response.isSuccess()) {
+                openLogin();
+            } else {
+                showError(response != null ? response.getMessage() : "Server is not responding");
+            }
 
         } catch (Exception e) {
             showError(e.getMessage());

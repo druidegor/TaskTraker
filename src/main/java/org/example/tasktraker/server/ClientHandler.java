@@ -57,6 +57,8 @@ public class ClientHandler implements Runnable {
         switch (request.getCommand()) {
             case "LOGIN":
                 return handleLogin(request.getPayload());
+            case "REGISTER":
+                return handleRegister(request.getPayload());
             case "GET_ALL_PROJECTS":
                 return handleGetAllProjects();
             case "GET_ALL_USERS":
@@ -81,6 +83,8 @@ public class ClientHandler implements Runnable {
                 return handleChangeTaskStatus(request.getPayload());
             case "GET_TASKS_BY_ASSIGNEE":
                 return handleGetTasksByAssignee(request.getPayload());
+            case "GET_TASKS_BY_TESTER_PROJECTS":
+                return handleGetTasksByTesterProjects(request.getPayload());
             case "GET_USER_PROJECTS":
                 return handleGetUserProjects(request.getPayload());
             default:
@@ -96,6 +100,16 @@ public class ClientHandler implements Runnable {
                 return ResponseFactory.createSuccess("Успешный вход", user);
             }
             return ResponseFactory.createError("Неверный логин или пароль");
+        } catch (Exception e) {
+            return ResponseFactory.createError(e.getMessage());
+        }
+    }
+
+    private Response handleRegister(Object payload) {
+        try {
+            String[] data = (String[]) payload;
+            userService.register(data[0], data[1], data[2], data[3], data[4]);
+            return ResponseFactory.createSuccess("User registered");
         } catch (Exception e) {
             return ResponseFactory.createError(e.getMessage());
         }
@@ -207,14 +221,15 @@ public class ClientHandler implements Runnable {
 
     private Response handleCreateBug(Object payload) {
         try {
-            // Ожидаем массив: [title (String), description (String), projectId (int), authorId (int)]
+            // [title, description, projectId, authorId, optional assigneeId]
             Object[] data = (Object[]) payload;
             String title = (String) data[0];
             String description = (String) data[1];
             int projectId = (int) data[2];
             int authorId = (int) data[3];
+            int assigneeId = data.length > 4 ? (int) data[4] : 0;
 
-            boolean success = taskService.createBug(title, description, projectId, authorId);
+            boolean success = taskService.createBug(title, description, projectId, authorId, assigneeId);
 
             if (success) {
                 return ResponseFactory.createSuccess("Баг успешно создан");
@@ -247,11 +262,19 @@ public class ClientHandler implements Runnable {
         try {
             int assigneeId = (int) payload;
             List<org.example.tasktraker.entity.Task> tasks = taskService.getTasksByAssignee(assigneeId);
-            // Используем фабричный метод для успешного ответа
-            return org.example.tasktraker.network.ResponseFactory.createSuccess("Задачи разработчика успешно получены", tasks);
+            return ResponseFactory.createSuccess("Задачи разработчика успешно получены", tasks);
         } catch (Exception e) {
-            // Используем фабричный метод для ответа с ошибкой
-            return org.example.tasktraker.network.ResponseFactory.createError(e.getMessage());
+            return ResponseFactory.createError(e.getMessage());
+        }
+    }
+
+    private Response handleGetTasksByTesterProjects(Object payload) {
+        try {
+            int testerId = (int) payload;
+            List<Task> tasks = taskService.getTasksByTesterProjects(testerId);
+            return ResponseFactory.createSuccess("Задачи проектов тестировщика успешно получены", tasks);
+        } catch (Exception e) {
+            return ResponseFactory.createError(e.getMessage());
         }
     }
 
@@ -259,11 +282,9 @@ public class ClientHandler implements Runnable {
         try {
             int userId = (int) payload;
             List<org.example.tasktraker.entity.Project> projects = projectService.getUserProjects(userId);
-            // Используем фабричный метод для успешного ответа
-            return org.example.tasktraker.network.ResponseFactory.createSuccess("Проекты пользователя успешно получены", projects);
+            return ResponseFactory.createSuccess("Проекты пользователя успешно получены", projects);
         } catch (Exception e) {
-            // Используем фабричный метод для ответа с ошибкой
-            return org.example.tasktraker.network.ResponseFactory.createError(e.getMessage());
+            return ResponseFactory.createError(e.getMessage());
         }
     }
 }

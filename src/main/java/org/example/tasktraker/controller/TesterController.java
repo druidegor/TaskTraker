@@ -1,225 +1,347 @@
 package org.example.tasktraker.controller;
 
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.stage.Stage;
+import org.example.tasktraker.entity.Comment;
+import org.example.tasktraker.entity.Project;
 import org.example.tasktraker.entity.Task;
 import org.example.tasktraker.network.NetworkClient;
 import org.example.tasktraker.network.Request;
 import org.example.tasktraker.network.Response;
-import javafx.scene.control.ButtonBar.ButtonData;
-import javafx.scene.layout.GridPane;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class TesterController {
 
     private int userId;
     private Task selectedTask;
+    private List<Project> userProjects = new ArrayList<>();
+    private List<Task> allTasks = new ArrayList<>();
 
+    @FXML private Label testerInfoLabel;
+    @FXML private ListView<Project> projectList;
+    @FXML private ComboBox<String> statusFilterComboBox;
     @FXML private TableView<Task> tasksTable;
     @FXML private TableColumn<Task, String> colTitle;
-    @FXML private TableColumn<Task, String> colDeveloper;
+    @FXML private TableColumn<Task, String> colProject;
     @FXML private TableColumn<Task, String> colStatus;
     @FXML private TableColumn<Task, String> colPriority;
-
+    @FXML private Label selectedTaskLabel;
     @FXML private TextArea descriptionArea;
     @FXML private ListView<String> commentsList;
     @FXML private TextField commentField;
-    @FXML private Button acceptButton;
-    @FXML private Button rejectButton;
-    @FXML private Button createBugButton;
-    @FXML private Button sendCommentButton;
 
     public void initialize() {
-        colTitle.setCellValueFactory(new PropertyValueFactory<>("title"));
-        colDeveloper.setCellValueFactory(new PropertyValueFactory<>("project"));
-        colStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
-        colPriority.setCellValueFactory(new PropertyValueFactory<>("priority"));
+        configureProjects();
+        configureFilters();
+        configureTasks();
+    }
 
-        loadTasks();
+    public void setUserId(int userId) {
+        this.userId = userId;
+        testerInfoLabel.setText("Tester ID: " + userId + " (Online)");
+        refreshData();
+    }
 
-        // Обновленный слушатель выбора задачи
-        tasksTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-                selectedTask = newSelection;
-                descriptionArea.setText(newSelection.getDescription());
-                loadComments(newSelection.getId()); // Загружаем комментарии
-            } else {
-                selectedTask = null;
-                descriptionArea.clear();
-                commentsList.getItems().clear();
+    private void configureProjects() {
+        projectList.setCellFactory(list -> new ListCell<>() {
+            @Override
+            protected void updateItem(Project project, boolean empty) {
+                super.updateItem(project, empty);
+                setText(empty || project == null ? null : project.getName());
             }
         });
 
-        acceptButton.setOnAction(e -> handleStatusChange(3)); // 3 - Успешно (Accept)
-        rejectButton.setOnAction(e -> handleStatusChange(4)); // 4 - Отклонено/На доработку (Reject)
-        createBugButton.setOnAction(e -> handleCreateBug());
-        // Слушатель для кнопки отправки комментария
-        sendCommentButton.setOnAction(e -> handleSendComment());
+        projectList.getSelectionModel().selectedItemProperty().addListener((obs, oldProject, newProject) -> applyFilters());
     }
 
-    private void loadTasks() {
-        // Создаем запрос на сервер
-        Request request = new Request("GET_ALL_TASKS", null);
-        Response response = NetworkClient.getInstance().sendRequest(request);
+    private void configureFilters() {
+        statusFilterComboBox.getItems().addAll(
+                "All",
+                "Ready for Testing",
+                "Open",
+                "In Progress",
+                "Accepted",
+                "Rejected"
+        );
+        statusFilterComboBox.getSelectionModel().select("Ready for Testing");
+        statusFilterComboBox.setOnAction(event -> applyFilters());
+    }
 
-        // Если сервер ответил успешно
+    private void configureTasks() {
+        colTitle.setCellValueFactory(new PropertyValueFactory<>("title"));
+        colProject.setCellValueFactory(new PropertyValueFactory<>("project"));
+        colStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
+        colPriority.setCellValueFactory(new PropertyValueFactory<>("priority"));
+
+        tasksTable.getSelectionModel().selectedItemProperty().addListener((obs, oldTask, newTask) -> showTaskDetails(newTask));
+
+        ContextMenu contextMenu = new ContextMenu();
+        MenuItem acceptItem = new MenuItem("Accept");
+        MenuItem rejectItem = new MenuItem("Reject");
+        MenuItem createBugItem = new MenuItem("Create Bug");
+        contextMenu.getItems().addAll(acceptItem, rejectItem, createBugItem);
+
+        acceptItem.setOnAction(event -> acceptSelectedTask());
+        rejectItem.setOnAction(event -> rejectSelectedTask());
+        createBugItem.setOnAction(event -> handleCreateBug());
+
+        tasksTable.setRowFactory(table -> {
+            TableRow<Task> row = new TableRow<>();
+            row.setContextMenu(contextMenu);
+            return row;
+        });
+    }
+
+    @FXML
+    private void handleRefresh() {
+        refreshData();
+    }
+
+    @FXML
+    private void handleShowAllProjects() {
+        projectList.getSelectionModel().clearSelection();
+        applyFilters();
+    }
+
+    @FXML
+    private void handleAccept() {
+        acceptSelectedTask();
+    }
+
+    @FXML
+    private void handleReject() {
+        rejectSelectedTask();
+    }
+
+    @FXML
+    private void handleCreateBug() {
+        int projectId = resolveCurrentProjectId();
+        if (projectId <= 0) {
+            showError("Select a project or task first");
+            return;
+        }
+
+        TextInputDialog titleDialog = new TextInputDialog();
+        titleDialog.setTitle("Create Bug");
+        titleDialog.setHeaderText("Bug title");
+        titleDialog.setContentText("Title:");
+        Optional<String> titleResult = titleDialog.showAndWait();
+
+        if (titleResult.isEmpty() || titleResult.get().trim().isEmpty()) {
+            return;
+        }
+
+        TextInputDialog descriptionDialog = new TextInputDialog(buildBugDescriptionPrefix());
+        descriptionDialog.setTitle("Create Bug");
+        descriptionDialog.setHeaderText("Bug description");
+        descriptionDialog.setContentText("Description:");
+        Optional<String> descriptionResult = descriptionDialog.showAndWait();
+
+        Object[] payload = {
+                titleResult.get().trim(),
+                descriptionResult.orElse("").trim(),
+                projectId,
+                userId,
+                selectedTask != null ? selectedTask.getAssigneeId() : 0
+        };
+
+        Response response = NetworkClient.getInstance().sendRequest(new Request("CREATE_BUG", payload));
+
         if (response != null && response.isSuccess()) {
-            List<Task> tasks = (List<Task>) response.getData();
-
-            // Заполняем JavaFX таблицу данными
-            ObservableList<Task> taskList = FXCollections.observableArrayList(tasks);
-            tasksTable.setItems(taskList);
+            showInfo("Bug created");
+            refreshData();
         } else {
-            System.err.println("Ошибка загрузки задач: " + (response != null ? response.getMessage() : "Нет ответа"));
+            showError(response != null ? response.getMessage() : "Server is not responding");
         }
     }
 
-    private void loadComments(int taskId) {
-        commentsList.getItems().clear();
-
-        Request request = new Request("GET_COMMENTS_BY_TASK", taskId);
-        Response response = NetworkClient.getInstance().sendRequest(request);
-
-        if (response != null && response.isSuccess()) {
-            // Так как мы добавили toString() в Comment, можно просто вывести их как строки
-            List<org.example.tasktraker.entity.Comment> comments =
-                    (List<org.example.tasktraker.entity.Comment>) response.getData();
-
-            for (org.example.tasktraker.entity.Comment c : comments) {
-                commentsList.getItems().add(c.toString());
-            }
-        } else {
-            System.err.println("Ошибка загрузки комментариев: " +
-                    (response != null ? response.getMessage() : "Нет ответа"));
-        }
-    }
-
+    @FXML
     private void handleSendComment() {
         if (selectedTask == null) {
-            System.out.println("Выберите задачу сначала!");
+            showError("Select a task first");
             return;
         }
 
         String text = commentField.getText().trim();
         if (text.isEmpty()) {
+            showError("Comment is empty");
             return;
         }
 
-        // Формируем пакет данных: [taskId, authorId, text]
-        // ВАЖНО: убедись, что при логине в TesterController передается userId!
-        // Пока используем userId (убедись, что он у тебя устанавливается, как в AdminController)
-        Object[] payload = {selectedTask.getId(), this.userId, text};
-        Request request = new Request("ADD_COMMENT", payload);
-        Response response = NetworkClient.getInstance().sendRequest(request);
+        addComment(selectedTask.getId(), text);
+        commentField.clear();
+        loadComments(selectedTask.getId());
+    }
+
+    @FXML
+    private void handleLogout() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/org/example/tasktraker/login_screen.fxml"));
+            Scene scene = new Scene(loader.load());
+            Stage stage = (Stage) testerInfoLabel.getScene().getWindow();
+            stage.setScene(scene);
+        } catch (Exception e) {
+            showError("Cannot open login screen");
+        }
+    }
+
+    private void refreshData() {
+        loadTesterProjects();
+        loadTasks();
+    }
+
+    private void loadTesterProjects() {
+        projectList.getItems().clear();
+
+        Response response = NetworkClient.getInstance().sendRequest(new Request("GET_USER_PROJECTS", userId));
 
         if (response != null && response.isSuccess()) {
-            commentField.clear(); // Очищаем поле ввода
-            loadComments(selectedTask.getId()); // Сразу перезагружаем список комментариев
+            userProjects = (List<Project>) response.getData();
+            projectList.getItems().addAll(userProjects);
         } else {
-            System.err.println("Ошибка отправки комментария: " +
-                    (response != null ? response.getMessage() : "Нет ответа"));
+            showError(response != null ? response.getMessage() : "Cannot load projects");
         }
     }
 
-    public void setUserId(int userId) {
-        this.userId = userId;
+    private void loadTasks() {
+        Response response = NetworkClient.getInstance().sendRequest(new Request("GET_TASKS_BY_TESTER_PROJECTS", userId));
+
+        if (response != null && response.isSuccess()) {
+            allTasks = (List<Task>) response.getData();
+            applyFilters();
+        } else {
+            showError(response != null ? response.getMessage() : "Cannot load tasks");
+        }
     }
 
-    private void handleCreateBug() {
-        // Создаем кастомное диалоговое окно
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Создать баг");
-        dialog.setHeaderText("Пожалуйста, опишите найденный баг");
+    private void applyFilters() {
+        Set<Integer> projectIds = userProjects.stream()
+                .map(Project::getId)
+                .collect(Collectors.toSet());
 
-        // Кнопки "Создать" и "Отмена"
-        ButtonType createButtonType = new ButtonType("Создать", ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(createButtonType, ButtonType.CANCEL);
+        Project selectedProject = projectList.getSelectionModel().getSelectedItem();
+        String selectedStatus = statusFilterComboBox.getValue();
 
-        // Сетка для расположения элементов (GridPane)
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setStyle("-fx-padding: 20px;");
+        List<Task> filtered = allTasks.stream()
+                .filter(task -> projectIds.isEmpty() || projectIds.contains(task.getProjectId()))
+                .filter(task -> selectedProject == null || task.getProjectId() == selectedProject.getId())
+                .filter(task -> selectedStatus == null || "All".equals(selectedStatus) || selectedStatus.equals(task.getStatus()))
+                .toList();
 
-        // Поля ввода
-        TextField titleField = new TextField();
-        titleField.setPromptText("Название бага (кратко)");
-
-        TextArea descArea = new TextArea();
-        descArea.setPromptText("Шаги воспроизведения, ожидаемый и фактический результат...");
-        descArea.setPrefRowCount(4);
-
-        TextField projectIdField = new TextField();
-        projectIdField.setPromptText("ID проекта (число)");
-
-        // Добавляем элементы в сетку
-        grid.add(new Label("Название:"), 0, 0);
-        grid.add(titleField, 1, 0);
-        grid.add(new Label("Описание:"), 0, 1);
-        grid.add(descArea, 1, 1);
-        grid.add(new Label("ID проекта:"), 0, 2);
-        grid.add(projectIdField, 1, 2);
-
-        dialog.getDialogPane().setContent(grid);
-
-        // Ждем, пока пользователь нажмет кнопку
-        dialog.showAndWait().ifPresent(response -> {
-            if (response == createButtonType) {
-                try {
-                    String title = titleField.getText().trim();
-                    String desc = descArea.getText().trim();
-                    int projectId = Integer.parseInt(projectIdField.getText().trim());
-
-                    if (title.isEmpty()) {
-                        System.err.println("Название не может быть пустым!");
-                        return;
-                    }
-
-                    // Отправляем запрос на сервер: [title, description, projectId, authorId]
-                    Object[] payload = {title, desc, projectId, this.userId};
-                    Request request = new Request("CREATE_BUG", payload);
-                    Response netResponse = NetworkClient.getInstance().sendRequest(request);
-
-                    if (netResponse != null && netResponse.isSuccess()) {
-                        System.out.println("Баг успешно создан!");
-                        loadTasks(); // Сразу обновляем таблицу задач, чтобы увидеть баг
-                    } else {
-                        System.err.println("Ошибка сервера: " + (netResponse != null ? netResponse.getMessage() : "Нет ответа"));
-                    }
-                } catch (NumberFormatException ex) {
-                    System.err.println("Ошибка: ID проекта должен быть числом!");
-                    // Опционально: можно добавить показ Alert'а с ошибкой для пользователя
-                    Alert alert = new Alert(Alert.AlertType.ERROR, "ID проекта должен быть числом!");
-                    alert.show();
-                }
-            }
-        });
+        tasksTable.setItems(FXCollections.observableArrayList(filtered));
     }
 
-    private void handleStatusChange(int newStatusId) {
-        if (selectedTask == null) {
-            System.out.println("Выберите задачу сначала!");
+    private void showTaskDetails(Task task) {
+        selectedTask = task;
+        commentsList.getItems().clear();
+
+        if (task == null) {
+            selectedTaskLabel.setText("No task selected");
+            descriptionArea.clear();
             return;
         }
 
-        // Формируем пакет данных: [taskId, statusId]
-        int[] payload = {selectedTask.getId(), newStatusId};
-        Request request = new Request("CHANGE_TASK_STATUS", payload);
-        Response response = NetworkClient.getInstance().sendRequest(request);
+        selectedTaskLabel.setText(task.getTitle() + " | " + task.getStatus() + " | " + task.getProject());
+        descriptionArea.setText(task.getDescription() != null ? task.getDescription() : "");
+        loadComments(task.getId());
+    }
+
+    private void loadComments(int taskId) {
+        Response response = NetworkClient.getInstance().sendRequest(new Request("GET_COMMENTS_BY_TASK", taskId));
 
         if (response != null && response.isSuccess()) {
-            System.out.println("Статус задачи успешно обновлен!");
-            loadTasks(); // Перезагружаем таблицу, чтобы увидеть новый статус
+            List<Comment> comments = (List<Comment>) response.getData();
+            commentsList.getItems().setAll(comments.stream().map(Comment::toString).toList());
+        } else {
+            showError(response != null ? response.getMessage() : "Cannot load comments");
+        }
+    }
 
-            // Очищаем выбранную задачу, чтобы избежать случайных кликов
+    private void acceptSelectedTask() {
+        if (selectedTask == null) {
+            showError("Select a task first");
+            return;
+        }
+
+        changeSelectedTaskStatus(3);
+    }
+
+    private void rejectSelectedTask() {
+        if (selectedTask == null) {
+            showError("Select a task first");
+            return;
+        }
+
+        TextInputDialog reasonDialog = new TextInputDialog();
+        reasonDialog.setTitle("Reject Task");
+        reasonDialog.setHeaderText("Reason for rejection");
+        reasonDialog.setContentText("Comment:");
+        Optional<String> reason = reasonDialog.showAndWait();
+
+        if (reason.isPresent() && !reason.get().trim().isEmpty()) {
+            addComment(selectedTask.getId(), "Rejected: " + reason.get().trim());
+        }
+
+        changeSelectedTaskStatus(4);
+    }
+
+    private void changeSelectedTaskStatus(int statusId) {
+        int[] payload = {selectedTask.getId(), statusId};
+        Response response = NetworkClient.getInstance().sendRequest(new Request("CHANGE_TASK_STATUS", payload));
+
+        if (response != null && response.isSuccess()) {
+            refreshData();
             tasksTable.getSelectionModel().clearSelection();
         } else {
-            System.err.println("Ошибка изменения статуса: " +
-                    (response != null ? response.getMessage() : "Нет ответа"));
+            showError(response != null ? response.getMessage() : "Cannot change task status");
         }
+    }
+
+    private void addComment(int taskId, String text) {
+        Object[] payload = {taskId, userId, text};
+        Response response = NetworkClient.getInstance().sendRequest(new Request("ADD_COMMENT", payload));
+
+        if (response == null || !response.isSuccess()) {
+            showError(response != null ? response.getMessage() : "Cannot send comment");
+        }
+    }
+
+    private int resolveCurrentProjectId() {
+        if (selectedTask != null && selectedTask.getProjectId() > 0) {
+            return selectedTask.getProjectId();
+        }
+
+        Project selectedProject = projectList.getSelectionModel().getSelectedItem();
+        return selectedProject != null ? selectedProject.getId() : 0;
+    }
+
+    private String buildBugDescriptionPrefix() {
+        if (selectedTask == null) {
+            return "";
+        }
+
+        return "Found while testing task #" + selectedTask.getId() + " (" + selectedTask.getTitle() + "): ";
+    }
+
+    private void showInfo(String msg) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setContentText(msg);
+        alert.show();
+    }
+
+    private void showError(String msg) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setContentText(msg);
+        alert.show();
     }
 }
