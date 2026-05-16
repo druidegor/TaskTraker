@@ -74,6 +74,10 @@ public class ClientHandler implements Runnable {
                 return handleCreateBug(request.getPayload());
             case "CHANGE_TASK_STATUS":
                 return handleChangeTaskStatus(request.getPayload());
+            case "GET_TASKS_BY_ASSIGNEE":
+                return handleGetTasksByAssignee(request.getPayload());
+            case "GET_USER_PROJECTS":
+                return handleGetUserProjects(request.getPayload());
             default:
                 return new Response(false, "Неизвестная команда", null);
         }
@@ -204,6 +208,30 @@ public class ClientHandler implements Runnable {
             return new Response(false, "Не удалось обновить статус в базе", null);
         } catch (Exception e) {
             return new Response(false, "Ошибка сервера: " + e.getMessage(), null);
+        }
+    }
+
+    private Response handleGetTasksByAssignee(Object payload) {
+        try {
+            int assigneeId = (int) payload;
+            List<org.example.tasktraker.entity.Task> tasks = taskService.getTasksByAssignee(assigneeId);
+            // Используем фабричный метод для успешного ответа
+            return org.example.tasktraker.network.ResponseFactory.createSuccess("Задачи разработчика успешно получены", tasks);
+        } catch (Exception e) {
+            // Используем фабричный метод для ответа с ошибкой
+            return org.example.tasktraker.network.ResponseFactory.createError(e.getMessage());
+        }
+    }
+
+    private Response handleGetUserProjects(Object payload) {
+        try {
+            int userId = (int) payload;
+            List<org.example.tasktraker.entity.Project> projects = projectService.getUserProjects(userId);
+            // Используем фабричный метод для успешного ответа
+            return org.example.tasktraker.network.ResponseFactory.createSuccess("Проекты пользователя успешно получены", projects);
+        } catch (Exception e) {
+            // Используем фабричный метод для ответа с ошибкой
+            return org.example.tasktraker.network.ResponseFactory.createError(e.getMessage());
         }
     }
 }

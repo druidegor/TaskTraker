@@ -5,7 +5,7 @@
 
 <AnchorPane prefWidth="1000" prefHeight="600"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="org.example.tasktraker.DeveloperController">
+            fx:controller="org.example.tasktraker.controller.DeveloperController">
 
     <children>
 
@@ -20,13 +20,22 @@
             </left>
 
             <center>
-                <VBox spacing="10" style="-fx-padding: 20;">
+                <VBox spacing="15" style="-fx-padding: 20;">
+
+                    <Label text="My Tasks" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+                    <TableView fx:id="tasksTable" prefHeight="250">
+                        <columns>
+                            <TableColumn fx:id="colTitle" text="Title" prefWidth="150"/>
+                            <TableColumn fx:id="colStatus" text="Status" prefWidth="120"/>
+                            <TableColumn fx:id="colPriority" text="Priority" prefWidth="100"/>
+                        </columns>
+                    </TableView>
+
+                    <Separator/>
 
                     <Label text="Create Project" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
-
                     <TextField fx:id="projectNameField" promptText="Project name"/>
                     <TextField fx:id="projectDescriptionField" promptText="Description"/>
-
                     <Button text="Create Project" onAction="#handleCreateProject"/>
 
                 </VBox>

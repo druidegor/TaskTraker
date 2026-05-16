@@ -22,4 +22,8 @@ public class TaskService {
     public boolean updateTaskStatus(int taskId, int statusId) {
         return taskDao.updateTaskStatus(taskId, statusId);
     }
+
+    public List<Task> getTasksByAssignee(int assigneeId) {
+        return taskDao.getTasksByAssignee(assigneeId);
+    }
 }

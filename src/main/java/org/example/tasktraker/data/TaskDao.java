@@ -75,4 +75,31 @@ public class TaskDao {
         }
         return false;
     }
+
+    public List<Task> getTasksByAssignee(int assigneeId) {
+        List<Task> tasks = new ArrayList<>();
+        String sql = "SELECT id, title, status_id, priority_id, project_id, description FROM tasks WHERE assignee_id = ?";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, assigneeId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    tasks.add(new Task(
+                            rs.getInt("id"),
+                            rs.getString("title"),
+                            "Status " + rs.getInt("status_id"),     // Временно, как у тебя в getAllTasks
+                            "Priority " + rs.getInt("priority_id"),
+                            "Project " + rs.getInt("project_id"),
+                            rs.getString("description")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return tasks;
+    }
 }

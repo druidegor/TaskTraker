@@ -5,7 +5,6 @@ import javafx.scene.control.*;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import org.example.tasktraker.DeveloperController;
 import org.example.tasktraker.entity.User;
 import org.example.tasktraker.network.NetworkClient;
 import org.example.tasktraker.network.Request;
@@ -87,6 +86,10 @@ public class LoginController {
             }
             if (controller instanceof TesterController) {
                 ((TesterController) controller).setUserId(userId);
+            }
+
+            if (controller instanceof DeveloperController) {
+                ((DeveloperController) controller).setUserId(userId);
             }
 
             Stage stage = (Stage) loginButton.getScene().getWindow();
