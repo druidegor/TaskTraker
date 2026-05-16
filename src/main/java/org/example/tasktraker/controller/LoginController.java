@@ -8,7 +8,9 @@ import javafx.stage.Stage;
 import org.example.tasktraker.DeveloperController;
 import org.example.tasktraker.TesterController;
 import org.example.tasktraker.entity.User;
-import org.example.tasktraker.service.UserService;
+import org.example.tasktraker.network.NetworkClient;
+import org.example.tasktraker.network.Request;
+import org.example.tasktraker.network.Response;
 
 public class LoginController {
 
@@ -17,8 +19,6 @@ public class LoginController {
     @FXML private Label errorLabel;
     @FXML private Button loginButton;
     @FXML private Hyperlink registerLink;
-
-    private final UserService userService = new UserService();
 
     public void initialize() {
         loginButton.setOnAction(e -> handleLogin());
@@ -35,16 +35,27 @@ public class LoginController {
         }
 
         try {
-            User user = userService.login(email, password);
+            // 1. Упаковываем логин и пароль в массив
+            String[] credentials = {email, password};
 
-            if (user != null) {
+            // 2. Создаем письмо (Запрос) для сервера
+            Request request = new Request("LOGIN", credentials);
+
+            // 3. Отправляем письмо через наш Singleton-посредник и ждем ответ
+            Response response = NetworkClient.getInstance().sendRequest(request);
+
+            // 4. Проверяем, что ответил сервер
+            if (response != null && response.isSuccess()) {
+                // Сервер пустил нас! Достаем объект пользователя
+                User user = (User) response.getData();
                 openDashboard(user.getRole(), user.getId());
             } else {
-                showError("Invalid email or password");
+                // Сервер не пустил (неверный пароль или логин)
+                showError(response != null ? response.getMessage() : "Нет ответа от сервера");
             }
 
         } catch (Exception e) {
-            showError(e.getMessage());
+            showError("Ошибка: " + e.getMessage());
         }
     }
 
@@ -72,12 +83,6 @@ public class LoginController {
 
             Object controller = loader.getController();
 
-            if (controller instanceof DeveloperController) {
-                //((DeveloperController) controller).setUserId(userId);
-            }
-            if (controller instanceof TesterController) {
-                //((TesterController) controller).setUserId(userId);
-            }
             if (controller instanceof AdminController) {
                 ((AdminController) controller).setUserId(userId);
             }
@@ -86,6 +91,7 @@ public class LoginController {
             stage.setScene(scene);
 
         } catch (Exception e) {
+            e.printStackTrace();
             showError("Error loading screen");
         }
     }

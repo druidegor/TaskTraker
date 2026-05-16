@@ -1,6 +1,8 @@
 package org.example.tasktraker.entity;
 
-public class Project {
+import java.io.Serializable;
+
+public class Project implements Serializable {
     private int id;
     private String name;
     private String description;
