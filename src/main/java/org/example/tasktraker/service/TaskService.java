@@ -19,6 +19,37 @@ public class TaskService {
         return taskDao.createBug(title.trim(), description != null ? description.trim() : "", projectId, authorId);
     }
 
+    public void createTask(String title, String description, int projectId, int assigneeId, int authorId, int priorityId) {
+        if (title == null || title.trim().isEmpty()) {
+            throw new RuntimeException("Task title is empty");
+        }
+
+        if (projectId <= 0) {
+            throw new RuntimeException("Project is not selected");
+        }
+
+        if (assigneeId <= 0) {
+            throw new RuntimeException("Assignee is not selected");
+        }
+
+        if (priorityId <= 0) {
+            throw new RuntimeException("Priority is not selected");
+        }
+
+        boolean created = taskDao.createTask(
+                title.trim(),
+                description != null ? description.trim() : "",
+                projectId,
+                assigneeId,
+                authorId,
+                priorityId
+        );
+
+        if (!created) {
+            throw new RuntimeException("Task creation failed");
+        }
+    }
+
     public boolean updateTaskStatus(int taskId, int statusId) {
         return taskDao.updateTaskStatus(taskId, statusId);
     }

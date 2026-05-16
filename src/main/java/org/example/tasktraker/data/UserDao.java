@@ -24,7 +24,7 @@ public class UserDao {
 
             ResultSet rs = stmt.executeQuery();
 
-            if (rs.next()) {
+            while (rs.next()) {
                 users.add( new User(
                         rs.getInt("id"),
                         rs.getString("name"),

@@ -13,6 +13,10 @@ import java.util.List;
 public class ProjectUserDao {
 
     public boolean addUserToProject(int userId, int projectId) {
+        if (isUserAssignedToProject(userId, projectId)) {
+            return true;
+        }
+
         String sql = "INSERT INTO project_users (user_id, project_id) VALUES (?, ?)";
 
         try (Connection conn = Database.getConnection();
@@ -23,6 +27,25 @@ public class ProjectUserDao {
 
             return stmt.executeUpdate() > 0;
 
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    private boolean isUserAssignedToProject(int userId, int projectId) {
+        String sql = "SELECT 1 FROM project_users WHERE user_id = ? AND project_id = ?";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, userId);
+            stmt.setInt(2, projectId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }

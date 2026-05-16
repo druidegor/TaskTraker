@@ -6,6 +6,7 @@ import org.example.tasktraker.entity.Task;
 import org.example.tasktraker.entity.User;
 import org.example.tasktraker.network.Request;
 import org.example.tasktraker.network.Response;
+import org.example.tasktraker.network.ResponseFactory;
 import org.example.tasktraker.service.CommentService;
 import org.example.tasktraker.service.ProjectService;
 import org.example.tasktraker.service.TaskService;
@@ -64,6 +65,10 @@ public class ClientHandler implements Runnable {
                 return handleCreateProject(request.getPayload());
             case "ASSIGN_USER":
                 return handleAssignUser(request.getPayload());
+            case "GET_PROJECT_USERS":
+                return handleGetProjectUsers(request.getPayload());
+            case "CREATE_TASK":
+                return handleCreateTask(request.getPayload());
             case "GET_ALL_TASKS":         // <-- ДОБАВИТЬ ЭТО
                 return handleGetAllTasks();
             case "ADD_COMMENT":
@@ -79,7 +84,7 @@ public class ClientHandler implements Runnable {
             case "GET_USER_PROJECTS":
                 return handleGetUserProjects(request.getPayload());
             default:
-                return new Response(false, "Неизвестная команда", null);
+                return ResponseFactory.createError("Неизвестная команда");
         }
     }
 
@@ -88,11 +93,11 @@ public class ClientHandler implements Runnable {
             String[] credentials = (String[]) payload;
             User user = userService.login(credentials[0], credentials[1]);
             if (user != null) {
-                return new Response(true, "Успешный вход", user);
+                return ResponseFactory.createSuccess("Успешный вход", user);
             }
-            return new Response(false, "Неверный логин или пароль", null);
+            return ResponseFactory.createError("Неверный логин или пароль");
         } catch (Exception e) {
-            return new Response(false, e.getMessage(), null);
+            return ResponseFactory.createError(e.getMessage());
         }
     }
 
@@ -101,18 +106,18 @@ public class ClientHandler implements Runnable {
     private Response handleGetAllProjects() {
         try {
             List<Project> projects = projectService.getAllProjects();
-            return new Response(true, "Проекты получены", projects);
+            return ResponseFactory.createSuccess("Проекты получены", projects);
         } catch (Exception e) {
-            return new Response(false, e.getMessage(), null);
+            return ResponseFactory.createError(e.getMessage());
         }
     }
 
     private Response handleGetAllUsers() {
         try {
             List<User> users = userService.getAllUsers();
-            return new Response(true, "Пользователи получены", users);
+            return ResponseFactory.createSuccess("Пользователи получены", users);
         } catch (Exception e) {
-            return new Response(false, e.getMessage(), null);
+            return ResponseFactory.createError(e.getMessage());
         }
     }
 
@@ -120,9 +125,9 @@ public class ClientHandler implements Runnable {
         try {
             String[] data = (String[]) payload; // [name, description]
             projectService.createProject(data[0], data[1]);
-            return new Response(true, "Проект успешно создан", null);
+            return ResponseFactory.createSuccess("Проект успешно создан");
         } catch (Exception e) {
-            return new Response(false, e.getMessage(), null);
+            return ResponseFactory.createError(e.getMessage());
         }
     }
 
@@ -130,18 +135,45 @@ public class ClientHandler implements Runnable {
         try {
             int[] data = (int[]) payload; // [userId, projectId]
             projectService.assignUserToProject(data[0], data[1]);
-            return new Response(true, "Пользователь назначен на проект", null);
+            return ResponseFactory.createSuccess("Пользователь назначен на проект");
         } catch (Exception e) {
-            return new Response(false, e.getMessage(), null);
+            return ResponseFactory.createError(e.getMessage());
+        }
+    }
+
+    private Response handleGetProjectUsers(Object payload) {
+        try {
+            int projectId = (int) payload;
+            List<User> users = projectService.getProjectUsers(projectId);
+            return ResponseFactory.createSuccess("Участники проекта получены", users);
+        } catch (Exception e) {
+            return ResponseFactory.createError(e.getMessage());
+        }
+    }
+
+    private Response handleCreateTask(Object payload) {
+        try {
+            Object[] data = (Object[]) payload;
+            String title = (String) data[0];
+            String description = (String) data[1];
+            int projectId = (int) data[2];
+            int assigneeId = (int) data[3];
+            int authorId = (int) data[4];
+            int priorityId = (int) data[5];
+
+            taskService.createTask(title, description, projectId, assigneeId, authorId, priorityId);
+            return ResponseFactory.createSuccess("Задача успешно создана");
+        } catch (Exception e) {
+            return ResponseFactory.createError(e.getMessage());
         }
     }
 
     private Response handleGetAllTasks() {
         try {
             List<Task> tasks = taskService.getAllTasks();
-            return new Response(true, "Задачи успешно получены", tasks);
+            return ResponseFactory.createSuccess("Задачи успешно получены", tasks);
         } catch (Exception e) {
-            return new Response(false, e.getMessage(), null);
+            return ResponseFactory.createError(e.getMessage());
         }
     }
 
@@ -155,11 +187,11 @@ public class ClientHandler implements Runnable {
 
             boolean success = commentService.addComment(taskId, authorId, text);
             if (success) {
-                return new Response(true, "Комментарий добавлен", null);
+                return ResponseFactory.createSuccess("Комментарий добавлен");
             }
-            return new Response(false, "Не удалось добавить комментарий в БД", null);
+            return ResponseFactory.createError("Не удалось добавить комментарий в БД");
         } catch (Exception e) {
-            return new Response(false, e.getMessage(), null);
+            return ResponseFactory.createError(e.getMessage());
         }
     }
 
@@ -167,9 +199,9 @@ public class ClientHandler implements Runnable {
         try {
             int taskId = (int) payload; // Ожидаем просто число (ID задачи)
             List<Comment> comments = commentService.getCommentsByTaskId(taskId);
-            return new Response(true, "Комментарии загружены", comments);
+            return ResponseFactory.createSuccess("Комментарии загружены", comments);
         } catch (Exception e) {
-            return new Response(false, e.getMessage(), null);
+            return ResponseFactory.createError(e.getMessage());
         }
     }
 
@@ -185,12 +217,12 @@ public class ClientHandler implements Runnable {
             boolean success = taskService.createBug(title, description, projectId, authorId);
 
             if (success) {
-                return new Response(true, "Баг успешно создан", null);
+                return ResponseFactory.createSuccess("Баг успешно создан");
             }
-            return new Response(false, "Не удалось сохранить баг в базу", null);
+            return ResponseFactory.createError("Не удалось сохранить баг в базу");
 
         } catch (Exception e) {
-            return new Response(false, "Ошибка сервера: " + e.getMessage(), null);
+            return ResponseFactory.createError("Ошибка сервера: " + e.getMessage());
         }
     }
 
@@ -203,11 +235,11 @@ public class ClientHandler implements Runnable {
 
             boolean success = taskService.updateTaskStatus(taskId, statusId);
             if (success) {
-                return new Response(true, "Статус задачи обновлен", null);
+                return ResponseFactory.createSuccess("Статус задачи обновлен");
             }
-            return new Response(false, "Не удалось обновить статус в базе", null);
+            return ResponseFactory.createError("Не удалось обновить статус в базе");
         } catch (Exception e) {
-            return new Response(false, "Ошибка сервера: " + e.getMessage(), null);
+            return ResponseFactory.createError("Ошибка сервера: " + e.getMessage());
         }
     }
 

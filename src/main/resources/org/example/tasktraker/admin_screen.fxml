@@ -25,9 +25,18 @@
             <Label text="Create Project" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
 
             <TextField fx:id="projectNameField" promptText="Project name"/>
-            <TextField fx:id="projectDescriptionField" promptText="Description"/>
+            <TextArea fx:id="projectDescriptionField" promptText="Description" prefRowCount="3"/>
 
             <Button text="Create Project" onAction="#handleCreateProject"/>
+
+            <Separator/>
+
+            <Label text="Create Task" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+            <TextField fx:id="taskTitleField" promptText="Task title"/>
+            <TextArea fx:id="taskDescriptionField" promptText="Task description" prefRowCount="4"/>
+            <ComboBox fx:id="assigneeComboBox" promptText="Assignee" maxWidth="Infinity"/>
+            <ComboBox fx:id="priorityComboBox" promptText="Priority" maxWidth="Infinity"/>
+            <Button text="Create Task" onAction="#handleCreateTask"/>
         </VBox>
     </center>
 
@@ -35,8 +44,13 @@
         <VBox spacing="10" prefWidth="300" style="-fx-padding: 10;">
             <Label text="Assign User" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
 
-            <ComboBox fx:id="userComboBox" promptText="Select user"/>
+            <ComboBox fx:id="userComboBox" promptText="Select user" maxWidth="Infinity"/>
             <Button text="Assign to Project" onAction="#handleAssignUser"/>
+
+            <Separator/>
+
+            <Label text="Project Members" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+            <ListView fx:id="projectUsersList"/>
         </VBox>
     </right>
 

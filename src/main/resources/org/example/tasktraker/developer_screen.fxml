@@ -1,55 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<AnchorPane prefWidth="1000" prefHeight="600"
+<BorderPane prefWidth="1100" prefHeight="680"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="org.example.tasktraker.controller.DeveloperController">
 
-    <children>
+    <top>
+        <HBox spacing="12" style="-fx-padding: 10; -fx-background-color: #263238;">
+            <Label fx:id="developerInfoLabel" text="Developer" style="-fx-text-fill: white; -fx-font-size: 16;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Refresh" onAction="#handleRefresh"/>
+        </HBox>
+    </top>
 
-        <BorderPane prefWidth="1000" prefHeight="600">
+    <left>
+        <VBox spacing="10" prefWidth="260" style="-fx-padding: 10;">
+            <Label text="My Projects" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+            <Button text="Show All Tasks" maxWidth="Infinity" onAction="#handleShowAllTasks"/>
+            <ListView fx:id="projectList" VBox.vgrow="ALWAYS"/>
+        </VBox>
+    </left>
 
-            <left>
-                <VBox spacing="10" prefWidth="300" style="-fx-padding: 10;">
-                    <Label text="My Projects" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+    <center>
+        <VBox spacing="10" style="-fx-padding: 10;">
+            <HBox spacing="10">
+                <Label text="My Tasks" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="Start Work" onAction="#handleStartWork"/>
+                <Button text="Ready for Testing" onAction="#handleReadyForTesting"/>
+                <Button text="Create Bug" onAction="#handleCreateBug"/>
+            </HBox>
 
-                    <ListView fx:id="projectList" prefHeight="500"/>
-                </VBox>
-            </left>
+            <TableView fx:id="tasksTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colTitle" text="Title" prefWidth="240"/>
+                    <TableColumn fx:id="colProject" text="Project" prefWidth="180"/>
+                    <TableColumn fx:id="colStatus" text="Status" prefWidth="150"/>
+                    <TableColumn fx:id="colPriority" text="Priority" prefWidth="110"/>
+                </columns>
+            </TableView>
+        </VBox>
+    </center>
 
-            <center>
-                <VBox spacing="15" style="-fx-padding: 20;">
+    <right>
+        <VBox spacing="10" prefWidth="320" style="-fx-padding: 10;">
+            <Label text="Task Details" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+            <Label fx:id="selectedTaskLabel" text="No task selected" wrapText="true"/>
+            <TextArea fx:id="taskDescriptionArea" editable="false" wrapText="true" prefRowCount="7"/>
 
-                    <Label text="My Tasks" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
-                    <TableView fx:id="tasksTable" prefHeight="250">
-                        <columns>
-                            <TableColumn fx:id="colTitle" text="Title" prefWidth="150"/>
-                            <TableColumn fx:id="colStatus" text="Status" prefWidth="120"/>
-                            <TableColumn fx:id="colPriority" text="Priority" prefWidth="100"/>
-                        </columns>
-                    </TableView>
+            <Separator/>
 
-                    <Separator/>
+            <Label text="Comments" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+            <ListView fx:id="commentsList" VBox.vgrow="ALWAYS"/>
 
-                    <Label text="Create Project" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
-                    <TextField fx:id="projectNameField" promptText="Project name"/>
-                    <TextField fx:id="projectDescriptionField" promptText="Description"/>
-                    <Button text="Create Project" onAction="#handleCreateProject"/>
-
-                </VBox>
-            </center>
-
-            <right>
-                <VBox spacing="10" prefWidth="300" style="-fx-padding: 10;">
-                    <Label text="Project Details" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
-
-                    <Label text="(select project)"/>
-                </VBox>
-            </right>
-
-        </BorderPane>
-
-    </children>
-</AnchorPane>
+            <HBox spacing="8">
+                <TextField fx:id="commentField" promptText="Write a comment..." HBox.hgrow="ALWAYS"/>
+                <Button text="Send" onAction="#handleSendComment"/>
+            </HBox>
+        </VBox>
+    </right>
+</BorderPane>
