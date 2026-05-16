@@ -72,6 +72,8 @@ public class ClientHandler implements Runnable {
                 return handleGetCommentsByTask(request.getPayload());
             case "CREATE_BUG":
                 return handleCreateBug(request.getPayload());
+            case "CHANGE_TASK_STATUS":
+                return handleChangeTaskStatus(request.getPayload());
             default:
                 return new Response(false, "Неизвестная команда", null);
         }
@@ -183,6 +185,23 @@ public class ClientHandler implements Runnable {
             }
             return new Response(false, "Не удалось сохранить баг в базу", null);
 
+        } catch (Exception e) {
+            return new Response(false, "Ошибка сервера: " + e.getMessage(), null);
+        }
+    }
+
+    private Response handleChangeTaskStatus(Object payload) {
+        try {
+            // Ожидаем массив int: [taskId, statusId]
+            int[] data = (int[]) payload;
+            int taskId = data[0];
+            int statusId = data[1];
+
+            boolean success = taskService.updateTaskStatus(taskId, statusId);
+            if (success) {
+                return new Response(true, "Статус задачи обновлен", null);
+            }
+            return new Response(false, "Не удалось обновить статус в базе", null);
         } catch (Exception e) {
             return new Response(false, "Ошибка сервера: " + e.getMessage(), null);
         }

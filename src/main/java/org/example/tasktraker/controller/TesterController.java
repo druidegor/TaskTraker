@@ -54,6 +54,8 @@ public class TesterController {
             }
         });
 
+        acceptButton.setOnAction(e -> handleStatusChange(3)); // 3 - Успешно (Accept)
+        rejectButton.setOnAction(e -> handleStatusChange(4)); // 4 - Отклонено/На доработку (Reject)
         createBugButton.setOnAction(e -> handleCreateBug());
         // Слушатель для кнопки отправки комментария
         sendCommentButton.setOnAction(e -> handleSendComment());
@@ -196,5 +198,28 @@ public class TesterController {
                 }
             }
         });
+    }
+
+    private void handleStatusChange(int newStatusId) {
+        if (selectedTask == null) {
+            System.out.println("Выберите задачу сначала!");
+            return;
+        }
+
+        // Формируем пакет данных: [taskId, statusId]
+        int[] payload = {selectedTask.getId(), newStatusId};
+        Request request = new Request("CHANGE_TASK_STATUS", payload);
+        Response response = NetworkClient.getInstance().sendRequest(request);
+
+        if (response != null && response.isSuccess()) {
+            System.out.println("Статус задачи успешно обновлен!");
+            loadTasks(); // Перезагружаем таблицу, чтобы увидеть новый статус
+
+            // Очищаем выбранную задачу, чтобы избежать случайных кликов
+            tasksTable.getSelectionModel().clearSelection();
+        } else {
+            System.err.println("Ошибка изменения статуса: " +
+                    (response != null ? response.getMessage() : "Нет ответа"));
+        }
     }
 }

@@ -18,4 +18,8 @@ public class TaskService {
         }
         return taskDao.createBug(title.trim(), description != null ? description.trim() : "", projectId, authorId);
     }
+
+    public boolean updateTaskStatus(int taskId, int statusId) {
+        return taskDao.updateTaskStatus(taskId, statusId);
+    }
 }
