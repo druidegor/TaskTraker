@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+
+<AnchorPane prefWidth="1000" prefHeight="600"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="org.example.tasktraker.DeveloperController">
+
+    <children>
+
+        <BorderPane prefWidth="1000" prefHeight="600">
+
+            <left>
+                <VBox spacing="10" prefWidth="300" style="-fx-padding: 10;">
+                    <Label text="My Projects" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+
+                    <ListView fx:id="projectList" prefHeight="500"/>
+                </VBox>
+            </left>
+
+            <center>
+                <VBox spacing="10" style="-fx-padding: 20;">
+
+                    <Label text="Create Project" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+
+                    <TextField fx:id="projectNameField" promptText="Project name"/>
+                    <TextField fx:id="projectDescriptionField" promptText="Description"/>
+
+                    <Button text="Create Project" onAction="#handleCreateProject"/>
+
+                </VBox>
+            </center>
+
+            <right>
+                <VBox spacing="10" prefWidth="300" style="-fx-padding: 10;">
+                    <Label text="Project Details" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+
+                    <Label text="(select project)"/>
+                </VBox>
+            </right>
+
+        </BorderPane>
+
+    </children>
+</AnchorPane>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.tasktraker.TesterController">
+
+    <top>
+        <HBox spacing="20" style="-fx-padding: 10; -fx-background-color: #34495e;">
+            <Label text="Testing Tasks" style="-fx-text-fill: white; -fx-font-size: 18px;" />
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Logout" fx:id="logoutButton"/>
+        </HBox>
+    </top>
+
+    <center>
+        <VBox spacing="10" style="-fx-padding: 10;">
+
+            <TableView fx:id="tasksTable" prefHeight="250">
+
+                <columns>
+                    <TableColumn fx:id="colTitle" text="Title" prefWidth="150"/>
+                    <TableColumn fx:id="colDeveloper" text="Developer" prefWidth="150"/>
+                    <TableColumn fx:id="colStatus" text="Status" prefWidth="120"/>
+                    <TableColumn fx:id="colPriority" text="Priority" prefWidth="100"/>
+                </columns>
+
+            </TableView>
+
+            <TitledPane text="Task Details" expanded="true">
+                <VBox spacing="10" style="-fx-padding: 10;">
+
+                    <Label text="Description:"/>
+                    <TextArea fx:id="descriptionArea" prefHeight="80" editable="false"/>
+
+                    <Label text="Comments:"/>
+                    <ListView fx:id="commentsList" prefHeight="100"/>
+
+                    <HBox spacing="10">
+                        <TextField fx:id="commentField" promptText="Write a comment..." HBox.hgrow="ALWAYS"/>
+                        <Button text="Send" fx:id="sendCommentButton"/>
+                    </HBox>
+
+                </VBox>
+            </TitledPane>
+
+            <HBox spacing="10" alignment="CENTER_RIGHT">
+                <Button text="Accept" fx:id="acceptButton"/>
+                <Button text="Reject" fx:id="rejectButton"/>
+                <Button text="Create Bug" fx:id="createBugButton"/>
+            </HBox>
+
+        </VBox>
+    </center>
+
+</BorderPane>
