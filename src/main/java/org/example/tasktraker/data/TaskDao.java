@@ -37,4 +37,25 @@ public class TaskDao {
 
         return tasks;
     }
+
+    public boolean createBug(String title, String description, int projectId, int authorId) {
+        // Задаем значения по умолчанию: status_id = 1 (Open), priority_id = 1 (Normal), type_id = 2 (Bug)
+        String sql = "INSERT INTO tasks (title, description, status_id, priority_id, type_id, project_id, author_id) " +
+                "VALUES (?, ?, 1, 1, 2, ?, ?)";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, title);
+            stmt.setString(2, description);
+            stmt.setInt(3, projectId);
+            stmt.setInt(4, authorId);
+
+            return stmt.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }

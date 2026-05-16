@@ -11,4 +11,11 @@ public class TaskService {
     public List<Task> getAllTasks() {
         return taskDao.getAllTasks();
     }
+
+    public boolean createBug(String title, String description, int projectId, int authorId) {
+        if (title == null || title.trim().isEmpty()) {
+            throw new RuntimeException("Название бага не может быть пустым");
+        }
+        return taskDao.createBug(title.trim(), description != null ? description.trim() : "", projectId, authorId);
+    }
 }

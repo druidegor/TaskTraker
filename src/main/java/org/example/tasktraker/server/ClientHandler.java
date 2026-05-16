@@ -1,10 +1,12 @@
 package org.example.tasktraker.server;
 
+import org.example.tasktraker.entity.Comment;
 import org.example.tasktraker.entity.Project;
 import org.example.tasktraker.entity.Task;
 import org.example.tasktraker.entity.User;
 import org.example.tasktraker.network.Request;
 import org.example.tasktraker.network.Response;
+import org.example.tasktraker.service.CommentService;
 import org.example.tasktraker.service.ProjectService;
 import org.example.tasktraker.service.TaskService;
 import org.example.tasktraker.service.UserService;
@@ -20,12 +22,14 @@ public class ClientHandler implements Runnable {
     private final UserService userService;
     private final ProjectService projectService; // Добавили сервис проектов
     private final TaskService taskService; // <-- ДОБАВИТЬ ЭТО
+    private final CommentService commentService;
 
     public ClientHandler(Socket socket) {
         this.socket = socket;
         this.userService = new UserService();
         this.projectService = new ProjectService();
-        this.taskService = new TaskService(); // <-- ИНИЦИАЛИЗИРОВАТЬ ЭТО
+        this.taskService = new TaskService();
+        this.commentService = new CommentService(); // <-- Инициализируем
     }
 
     @Override
@@ -62,6 +66,12 @@ public class ClientHandler implements Runnable {
                 return handleAssignUser(request.getPayload());
             case "GET_ALL_TASKS":         // <-- ДОБАВИТЬ ЭТО
                 return handleGetAllTasks();
+            case "ADD_COMMENT":
+                return handleAddComment(request.getPayload());
+            case "GET_COMMENTS_BY_TASK":
+                return handleGetCommentsByTask(request.getPayload());
+            case "CREATE_BUG":
+                return handleCreateBug(request.getPayload());
             default:
                 return new Response(false, "Неизвестная команда", null);
         }
@@ -126,6 +136,55 @@ public class ClientHandler implements Runnable {
             return new Response(true, "Задачи успешно получены", tasks);
         } catch (Exception e) {
             return new Response(false, e.getMessage(), null);
+        }
+    }
+
+    private Response handleAddComment(Object payload) {
+        try {
+            // Ожидаем массив Object: [taskId (int), authorId (int), text (String)]
+            Object[] data = (Object[]) payload;
+            int taskId = (int) data[0];
+            int authorId = (int) data[1];
+            String text = (String) data[2];
+
+            boolean success = commentService.addComment(taskId, authorId, text);
+            if (success) {
+                return new Response(true, "Комментарий добавлен", null);
+            }
+            return new Response(false, "Не удалось добавить комментарий в БД", null);
+        } catch (Exception e) {
+            return new Response(false, e.getMessage(), null);
+        }
+    }
+
+    private Response handleGetCommentsByTask(Object payload) {
+        try {
+            int taskId = (int) payload; // Ожидаем просто число (ID задачи)
+            List<Comment> comments = commentService.getCommentsByTaskId(taskId);
+            return new Response(true, "Комментарии загружены", comments);
+        } catch (Exception e) {
+            return new Response(false, e.getMessage(), null);
+        }
+    }
+
+    private Response handleCreateBug(Object payload) {
+        try {
+            // Ожидаем массив: [title (String), description (String), projectId (int), authorId (int)]
+            Object[] data = (Object[]) payload;
+            String title = (String) data[0];
+            String description = (String) data[1];
+            int projectId = (int) data[2];
+            int authorId = (int) data[3];
+
+            boolean success = taskService.createBug(title, description, projectId, authorId);
+
+            if (success) {
+                return new Response(true, "Баг успешно создан", null);
+            }
+            return new Response(false, "Не удалось сохранить баг в базу", null);
+
+        } catch (Exception e) {
+            return new Response(false, "Ошибка сервера: " + e.getMessage(), null);
         }
     }
 }
