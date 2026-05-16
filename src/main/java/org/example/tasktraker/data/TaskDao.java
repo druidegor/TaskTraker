@@ -98,6 +98,8 @@ public class TaskDao {
     }
 
     public boolean updateTaskStatus(int taskId, int statusId) {
+        ensureStatusExists(statusId);
+
         String sql = "UPDATE tasks SET status_id = ? WHERE id = ?";
 
         try (Connection conn = Database.getConnection();
@@ -114,6 +116,54 @@ public class TaskDao {
         return false;
     }
 
+    private void ensureStatusExists(int statusId) {
+        String statusName = getStatusName(statusId);
+        if (statusName.startsWith("Status ")) {
+            return;
+        }
+
+        String[] tables = {"statuses", "task_statuses", "task_status", "status"};
+
+        for (String table : tables) {
+            if (statusExists(table, statusId)) {
+                return;
+            }
+
+            if (insertStatus(table, statusId, statusName)) {
+                return;
+            }
+        }
+    }
+
+    private boolean statusExists(String table, int statusId) {
+        String sql = "SELECT id FROM " + table + " WHERE id = ?";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, statusId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException ignored) {
+            return false;
+        }
+    }
+
+    private boolean insertStatus(String table, int statusId, String statusName) {
+        String sql = "INSERT INTO " + table + " (id, name) VALUES (?, ?)";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, statusId);
+            stmt.setString(2, statusName);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException ignored) {
+            return false;
+        }
+    }
+
     public List<Task> getTasksByAssignee(int assigneeId) {
         List<Task> tasks = new ArrayList<>();
         String sql =
@@ -122,7 +172,7 @@ public class TaskDao {
                         "FROM tasks t " +
                         "JOIN projects p ON t.project_id = p.id " +
                         "LEFT JOIN users u ON t.assignee_id = u.id " +
-                        "WHERE t.assignee_id = ?";
+                        "WHERE t.assignee_id = ? AND t.status_id IN (1, 2, 4)";
 
         try (Connection conn = Database.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -148,6 +198,41 @@ public class TaskDao {
         }
 
         return tasks;
+    }
+
+    public boolean deleteTask(int taskId) {
+        try (Connection conn = Database.getConnection()) {
+            deleteTaskComments(conn, taskId);
+
+            try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM tasks WHERE id = ?")) {
+                stmt.setInt(1, taskId);
+                return stmt.executeUpdate() > 0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    public void deleteTasksByProject(Connection conn, int projectId) throws SQLException {
+        try (PreparedStatement commentStmt = conn.prepareStatement(
+                "DELETE c FROM comments c JOIN tasks t ON c.task_id = t.id WHERE t.project_id = ?")) {
+            commentStmt.setInt(1, projectId);
+            commentStmt.executeUpdate();
+        }
+
+        try (PreparedStatement taskStmt = conn.prepareStatement("DELETE FROM tasks WHERE project_id = ?")) {
+            taskStmt.setInt(1, projectId);
+            taskStmt.executeUpdate();
+        }
+    }
+
+    private void deleteTaskComments(Connection conn, int taskId) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM comments WHERE task_id = ?")) {
+            stmt.setInt(1, taskId);
+            stmt.executeUpdate();
+        }
     }
 
     public List<Task> getTasksByTesterProjects(int testerId) {

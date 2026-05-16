@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ProjectDao {
+    private final TaskDao taskDao = new TaskDao();
 
     public boolean createProject(String name, String description) {
         String sql = "INSERT INTO projects (name, description) VALUES (?, ?)";
@@ -51,5 +52,31 @@ public class ProjectDao {
         }
 
         return projects;
+    }
+
+    public boolean deleteProject(int projectId) {
+        try (Connection conn = Database.getConnection()) {
+            conn.setAutoCommit(false);
+
+            taskDao.deleteTasksByProject(conn, projectId);
+
+            try (PreparedStatement usersStmt = conn.prepareStatement("DELETE FROM project_users WHERE project_id = ?")) {
+                usersStmt.setInt(1, projectId);
+                usersStmt.executeUpdate();
+            }
+
+            int deleted;
+            try (PreparedStatement projectStmt = conn.prepareStatement("DELETE FROM projects WHERE id = ?")) {
+                projectStmt.setInt(1, projectId);
+                deleted = projectStmt.executeUpdate();
+            }
+
+            conn.commit();
+            return deleted > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
     }
 }

@@ -18,7 +18,8 @@
     <left>
         <VBox spacing="10" prefWidth="300" style="-fx-padding: 10;">
             <Label text="Projects" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
-            <ListView fx:id="projectList"/>
+            <ListView fx:id="projectList" VBox.vgrow="ALWAYS"/>
+            <Button text="Delete Project" maxWidth="Infinity" onAction="#handleDeleteProject"/>
         </VBox>
     </left>
 
@@ -51,6 +52,7 @@
                     <TableColumn fx:id="colTaskAssignee" text="Assignee" prefWidth="140"/>
                 </columns>
             </TableView>
+            <Button text="Delete Selected Task" maxWidth="Infinity" onAction="#handleDeleteTask"/>
         </VBox>
     </center>
 
@@ -64,7 +66,8 @@
             <Separator/>
 
             <Label text="Project Members" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
-            <ListView fx:id="projectUsersList"/>
+            <ListView fx:id="projectUsersList" VBox.vgrow="ALWAYS"/>
+            <Button text="Remove From Project" maxWidth="Infinity" onAction="#handleUnassignUser"/>
         </VBox>
     </right>
 

@@ -67,10 +67,16 @@ public class ClientHandler implements Runnable {
                 return handleCreateProject(request.getPayload());
             case "ASSIGN_USER":
                 return handleAssignUser(request.getPayload());
+            case "UNASSIGN_USER":
+                return handleUnassignUser(request.getPayload());
+            case "DELETE_PROJECT":
+                return handleDeleteProject(request.getPayload());
             case "GET_PROJECT_USERS":
                 return handleGetProjectUsers(request.getPayload());
             case "CREATE_TASK":
                 return handleCreateTask(request.getPayload());
+            case "DELETE_TASK":
+                return handleDeleteTask(request.getPayload());
             case "GET_ALL_TASKS":         // <-- ДОБАВИТЬ ЭТО
                 return handleGetAllTasks();
             case "ADD_COMMENT":
@@ -155,6 +161,26 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    private Response handleUnassignUser(Object payload) {
+        try {
+            int[] data = (int[]) payload; // [userId, projectId]
+            projectService.removeUserFromProject(data[0], data[1]);
+            return ResponseFactory.createSuccess("Пользователь снят с проекта");
+        } catch (Exception e) {
+            return ResponseFactory.createError(e.getMessage());
+        }
+    }
+
+    private Response handleDeleteProject(Object payload) {
+        try {
+            int projectId = (int) payload;
+            projectService.deleteProject(projectId);
+            return ResponseFactory.createSuccess("Проект удален");
+        } catch (Exception e) {
+            return ResponseFactory.createError(e.getMessage());
+        }
+    }
+
     private Response handleGetProjectUsers(Object payload) {
         try {
             int projectId = (int) payload;
@@ -177,6 +203,16 @@ public class ClientHandler implements Runnable {
 
             taskService.createTask(title, description, projectId, assigneeId, authorId, priorityId);
             return ResponseFactory.createSuccess("Задача успешно создана");
+        } catch (Exception e) {
+            return ResponseFactory.createError(e.getMessage());
+        }
+    }
+
+    private Response handleDeleteTask(Object payload) {
+        try {
+            int taskId = (int) payload;
+            taskService.deleteTask(taskId);
+            return ResponseFactory.createSuccess("Задача удалена");
         } catch (Exception e) {
             return ResponseFactory.createError(e.getMessage());
         }

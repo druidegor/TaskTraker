@@ -118,7 +118,11 @@ public class AdminController {
 
         if (response != null && response.isSuccess()) {
             users = (List<User>) response.getData();
-            userComboBox.getItems().setAll(users);
+            userComboBox.getItems().setAll(
+                    users.stream()
+                            .filter(user -> !"ADMIN".equals(user.getRole()))
+                            .toList()
+            );
             assigneeComboBox.getItems().setAll(
                     users.stream()
                             .filter(user -> "DEVELOPER".equals(user.getRole()))
@@ -211,6 +215,55 @@ public class AdminController {
     }
 
     @FXML
+    private void handleUnassignUser() {
+        Project selectedProject = projectList.getSelectionModel().getSelectedItem();
+        User selectedUser = projectUsersList.getSelectionModel().getSelectedItem();
+
+        if (selectedProject == null || selectedUser == null) {
+            showError("Select project member");
+            return;
+        }
+
+        int[] payload = {selectedUser.getId(), selectedProject.getId()};
+        Response response = NetworkClient.getInstance().sendRequest(new Request("UNASSIGN_USER", payload));
+
+        if (response != null && response.isSuccess()) {
+            loadProjectUsers(selectedProject.getId());
+            loadProjects();
+            loadTasks();
+            showInfo("User removed from project");
+        } else {
+            showError(response != null ? response.getMessage() : "Server error");
+        }
+    }
+
+    @FXML
+    private void handleDeleteProject() {
+        Project selectedProject = projectList.getSelectionModel().getSelectedItem();
+
+        if (selectedProject == null) {
+            showError("Select project");
+            return;
+        }
+
+        if (!confirm("Delete project '" + selectedProject.getName() + "' and all its tasks?")) {
+            return;
+        }
+
+        Response response = NetworkClient.getInstance().sendRequest(new Request("DELETE_PROJECT", selectedProject.getId()));
+
+        if (response != null && response.isSuccess()) {
+            projectList.getSelectionModel().clearSelection();
+            projectUsersList.getItems().clear();
+            loadProjects();
+            loadTasks();
+            showInfo("Project deleted");
+        } else {
+            showError(response != null ? response.getMessage() : "Server error");
+        }
+    }
+
+    @FXML
     private void handleCreateTask() {
         Project selectedProject = projectList.getSelectionModel().getSelectedItem();
         User assignee = assigneeComboBox.getValue();
@@ -250,6 +303,37 @@ public class AdminController {
         } else {
             showError(response != null ? response.getMessage() : "Server error");
         }
+    }
+
+    @FXML
+    private void handleDeleteTask() {
+        Task selectedTask = tasksTable.getSelectionModel().getSelectedItem();
+
+        if (selectedTask == null) {
+            showError("Select task");
+            return;
+        }
+
+        if (!confirm("Delete task '" + selectedTask.getTitle() + "'?")) {
+            return;
+        }
+
+        Response response = NetworkClient.getInstance().sendRequest(new Request("DELETE_TASK", selectedTask.getId()));
+
+        if (response != null && response.isSuccess()) {
+            loadTasks();
+            showInfo("Task deleted");
+        } else {
+            showError(response != null ? response.getMessage() : "Server error");
+        }
+    }
+
+    private boolean confirm(String message) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setContentText(message);
+        return alert.showAndWait()
+                .filter(buttonType -> buttonType == ButtonType.OK)
+                .isPresent();
     }
 
     private void showInfo(String msg) {

@@ -12,8 +12,9 @@ public class HelloApplication extends Application {
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("login_screen.fxml"));
         Scene scene = new Scene(fxmlLoader.load(), 1000, 600);
-        stage.setTitle("Hello!");
+        stage.setTitle("TaskTracker Client");
         stage.setScene(scene);
+        stage.setMaximized(true);
         stage.show();
     }
 }

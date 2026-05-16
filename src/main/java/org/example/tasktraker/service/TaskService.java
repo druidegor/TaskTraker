@@ -77,6 +77,17 @@ public class TaskService {
         return taskDao.updateTaskStatus(taskId, statusId);
     }
 
+    public void deleteTask(int taskId) {
+        if (taskId <= 0) {
+            throw new RuntimeException("Task is not selected");
+        }
+
+        boolean deleted = taskDao.deleteTask(taskId);
+        if (!deleted) {
+            throw new RuntimeException("Task deletion failed");
+        }
+    }
+
     public List<Task> getTasksByAssignee(int assigneeId) {
         return taskDao.getTasksByAssignee(assigneeId);
     }
